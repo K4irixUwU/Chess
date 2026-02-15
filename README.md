@@ -1,1 +1,220 @@
-# Chess
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Shirokuro Newest Shadows</title>
+</head>
+
+<body style="
+margin:0;
+background:transparent;
+font-family:Arial, sans-serif;
+display:flex;
+justify-content:center;
+">
+
+<div id="card" style="
+width:360px;
+margin:20px;
+padding:24px;
+border-radius:28px;
+background:
+radial-gradient(circle at 20% 0%, rgba(255,255,255,.05), transparent 40%),
+radial-gradient(circle at 100% 100%, rgba(255,255,255,.04), transparent 50%),
+linear-gradient(180deg,#1a1a1f,#0a0a0d 80%);
+box-shadow:
+0 30px 70px rgba(0,0,0,.95),
+inset 0 0 60px rgba(255,255,255,.03);
+color:#f5f5f5;
+position:relative;
+overflow:hidden;
+">
+
+<!-- Ambient Glow -->
+<div style="
+position:absolute;
+top:-40%;
+left:-40%;
+width:180%;
+height:180%;
+background:radial-gradient(circle, rgba(255,255,255,.06), transparent 60%);
+animation:ambient 8s ease-in-out infinite alternate;
+pointer-events:none;
+"></div>
+
+<!-- Title -->
+<div style="
+text-align:center;
+font-size:22px;
+font-weight:900;
+letter-spacing:3px;
+text-shadow:0 0 25px rgba(255,255,255,.35);
+font-family:'Times New Roman', serif;
+">
+NEWEST SHADOWS
+</div>
+
+<div style="
+text-align:center;
+font-size:11px;
+opacity:.55;
+letter-spacing:2px;
+margin-bottom:22px;
+">
+ENTER THE ARENA
+</div>
+
+<!-- Members -->
+<div id="members" style="min-height:120px;">Loading...</div>
+
+<!-- Footer -->
+<div style="
+text-align:center;
+font-size:10px;
+opacity:.35;
+margin-top:18px;
+letter-spacing:2px;
+">
+THE ART OF BLACK AND WHITE
+</div>
+
+</div>
+
+<script>
+
+function timeAgo(timestamp){
+  const seconds = Math.floor((Date.now()/1000) - timestamp);
+  const intervals = [
+    {label:"year",seconds:31536000},
+    {label:"month",seconds:2592000},
+    {label:"day",seconds:86400},
+    {label:"hour",seconds:3600},
+    {label:"minute",seconds:60}
+  ];
+  for(const i of intervals){
+    const count = Math.floor(seconds / i.seconds);
+    if(count >= 1){
+      return count + " " + i.label + (count>1?"s":"") + " ago";
+    }
+  }
+  return "just joined";
+}
+
+async function loadMembers(){
+
+  const container = document.getElementById("members");
+  container.innerHTML = "Summoning...";
+
+  try{
+    const res = await fetch("https://api.chess.com/pub/club/shirokuro/members");
+    const data = await res.json();
+
+    const members = [...data.weekly, ...data.monthly];
+    members.sort((a,b)=> b.joined - a.joined);
+    const top5 = members.slice(0,5);
+
+    container.innerHTML = "";
+
+    const profiles = await Promise.all(
+      top5.map(m => 
+        fetch("https://api.chess.com/pub/player/" + m.username)
+        .then(r => r.json())
+      )
+    );
+
+    top5.forEach((m, i) => {
+
+      const pj = profiles[i];
+      const avatar = pj.avatar || "https://images.chesscomfiles.com/uploads/v1/images_users/tiny_mce/default-pawn.png";
+      const rapid = pj.chess_rapid?.last?.rating || "—";
+
+      const row = document.createElement("div");
+
+      row.style.cssText = `
+        display:flex;
+        align-items:center;
+        gap:14px;
+        padding:14px;
+        border-radius:22px;
+        background:rgba(255,255,255,.06);
+        backdrop-filter:blur(18px);
+        box-shadow:
+          inset 0 0 25px rgba(255,255,255,.05),
+          0 15px 35px rgba(0,0,0,.9);
+        margin-bottom:14px;
+        opacity:0;
+        transform:translateY(15px);
+        transition:.4s ease;
+        cursor:pointer;
+      `;
+
+      setTimeout(()=>{
+        row.style.opacity="1";
+        row.style.transform="translateY(0)";
+      }, i*120);
+
+      row.onmouseover = () => {
+        row.style.transform="translateY(-5px) scale(1.03)";
+        row.style.boxShadow="inset 0 0 25px rgba(255,255,255,.08),0 20px 45px rgba(0,0,0,.95)";
+      };
+
+      row.onmouseout = () => {
+        row.style.transform="translateY(0) scale(1)";
+        row.style.boxShadow="inset 0 0 25px rgba(255,255,255,.05),0 15px 35px rgba(0,0,0,.9)";
+      };
+
+      row.innerHTML = `
+        <a href="https://www.chess.com/member/${m.username}" 
+           target="_blank"
+           style="display:flex;align-items:center;gap:14px;text-decoration:none;color:inherit;width:100%;">
+
+          <img src="${avatar}" 
+               style="
+               width:52px;
+               height:52px;
+               border-radius:50%;
+               box-shadow:0 0 18px rgba(255,255,255,.25);
+               ">
+
+          <div style="flex:1;">
+            <div style="
+              font-weight:800;
+              font-size:15px;
+              letter-spacing:1px;
+            ">
+              @${m.username}
+            </div>
+
+            <div style="
+              font-size:11px;
+              opacity:.6;
+              letter-spacing:1px;
+            ">
+              Rapid ${rapid} · Joined ${timeAgo(m.joined)}
+            </div>
+          </div>
+        </a>
+      `;
+
+      container.appendChild(row);
+    });
+
+  }catch(e){
+    container.innerHTML = "Failed to summon shadows.";
+  }
+}
+
+loadMembers();
+setInterval(loadMembers, 300000);
+
+</script>
+
+<style>
+@keyframes ambient{
+  from { transform: translateY(0px); opacity:.5; }
+  to   { transform: translateY(40px); opacity:.8; }
+}
+</style>
+
+</body>
+</html>
